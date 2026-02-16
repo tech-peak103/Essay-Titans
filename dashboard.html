@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Essay Titans</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="index.html" class="logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+        </svg>
+        <span>Essay Titans</span>
+      </a>
+      <div class="auth-links"></div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding: 3rem 1rem;">
+    <!-- Profile Header -->
+    <div class="dashboard-header">
+      <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h1 data-testid="dashboard-welcome" id="welcomeText">Welcome, Student</h1>
+          <div style="margin-top: 0.5rem;">
+            <p style="color: var(--color-slate-600);" data-testid="user-school" id="schoolGrade"></p>
+            <p style="color: var(--color-slate-600);" data-testid="user-email" id="userEmail"></p>
+          </div>
+        </div>
+        <a href="categories.html" class="btn-primary" data-testid="submit-new-essay-button">Submit New Essay</a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="dashboard-stats">
+      <div class="stat-card" data-testid="stat-total-submissions">
+        <svg style="width: 32px; height: 32px; stroke: var(--color-amber-600); margin-bottom: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <div style="font-family: var(--font-serif); font-size: 2rem; font-weight: 700; color: var(--color-slate-900);" id="totalEssays">0</div>
+        <div style="font-size: 0.875rem; color: var(--color-slate-600);">Total Submissions</div>
+      </div>
+      <div class="stat-card" data-testid="stat-under-review">
+        <svg style="width: 32px; height: 32px; stroke: var(--color-amber-600); margin-bottom: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div style="font-family: var(--font-serif); font-size: 2rem; font-weight: 700; color: var(--color-slate-900);" id="underReview">0</div>
+        <div style="font-size: 0.875rem; color: var(--color-slate-600);">Under Review</div>
+      </div>
+      <div class="stat-card" data-testid="stat-reviewed">
+        <svg style="width: 32px; height: 32px; stroke: var(--color-green-600); margin-bottom: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div style="font-family: var(--font-serif); font-size: 2rem; font-weight: 700; color: var(--color-slate-900);" id="reviewed">0</div>
+        <div style="font-size: 0.875rem; color: var(--color-slate-600);">Reviewed</div>
+      </div>
+    </div>
+
+    <!-- Essays List -->
+    <div class="card card-body">
+      <h2 style="margin-bottom: 1.5rem;" data-testid="my-essays-title">My Essays</h2>
+      <div id="essaysContainer"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="main.js"></script>
+  <script>
+    requireAuth();
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      updateNavigation();
+      const user = await getCurrentUser();
+
+      if (!user) return;
+
+      document.getElementById('welcomeText').textContent = `Welcome, ${user.full_name}`;
+      document.getElementById('schoolGrade').textContent = `${user.school} • Grade ${user.grade}`;
+      document.getElementById('userEmail').textContent = user.email;
+
+      // Load essays
+      const { data: essays } = await supabase
+        .from('essays')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('submitted_at', { ascending: false });
+
+      document.getElementById('totalEssays').textContent = essays?.length || 0;
+      document.getElementById('underReview').textContent = essays?.filter(e => e.status === 'submitted').length || 0;
+      document.getElementById('reviewed').textContent = essays?.filter(e => e.status === 'reviewed').length || 0;
+
+      const container = document.getElementById('essaysContainer');
+
+      if (!essays || essays.length === 0) {
+        container.innerHTML = `
+          <div class="text-center" style="padding: 3rem 0;">
+            <svg style="width: 64px; height: 64px; stroke: var(--color-slate-300); margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p style="color: var(--color-slate-600); margin-bottom: 1rem;" data-testid="no-essays-message">No essays submitted yet</p>
+            <a href="categories.html" class="btn-primary" data-testid="start-writing-button">Start Writing</a>
+          </div>
+        `;
+      } else {
+        container.innerHTML = essays.map(essay => {
+          const statusIcon = essay.status === 'submitted' ? 
+            '<svg style="width: 20px; height: 20px; stroke: var(--color-amber-600);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' :
+            '<svg style="width: 20px; height: 20px; stroke: var(--color-green-600);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+          
+          const statusText = essay.status === 'submitted' ? 'Under Review' : 'Reviewed';
+
+          return `
+            <div class="essay-card" data-testid="essay-card-${essay.id}">
+              <div class="essay-header">
+                <div style="flex: 1;">
+                  <div class="text-mono mb-1" data-testid="essay-category-${essay.id}">${essay.category_title}</div>
+                  <h3 style="font-size: 1.25rem; margin-bottom: 0.25rem;" data-testid="essay-title-${essay.id}">${essay.title}</h3>
+                  <p class="essay-meta" data-testid="essay-date-${essay.id}">Submitted on ${formatDate(essay.submitted_at)}</p>
+                </div>
+                <div class="status-badge" data-testid="essay-status-${essay.id}">
+                  ${statusIcon}
+                  <span style="font-size: 0.875rem; font-weight: 500;">${statusText}</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <div style="font-size: 0.875rem; color: var(--color-slate-600);" data-testid="essay-wordcount-${essay.id}">${essay.word_count} words</div>
+                ${essay.score ? `
+                  <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="font-size: 0.875rem; font-weight: 500; color: var(--color-slate-900);" data-testid="essay-score-${essay.id}">Score: ${essay.score}/100</div>
+                  </div>
+                ` : ''}
+              </div>
+              
+              ${essay.feedback ? `
+                <div style="margin-top: 1rem; background: var(--color-slate-50); border: 1px solid var(--color-slate-100); border-radius: 6px; padding: 1rem;">
+                  <div class="prompt-label" style="margin-bottom: 0.5rem;">Judge's Feedback</div>
+                  <p style="font-size: 0.875rem; color: var(--color-slate-700);" data-testid="essay-feedback-${essay.id}">${essay.feedback}</p>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+    });
+  </script>
+</body>
+</html>

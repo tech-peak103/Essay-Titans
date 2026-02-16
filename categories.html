@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categories - Essay Titans</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <nav>
+    <div class="container">
+      <a href="index.html" class="logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+        </svg>
+        <span>Essay Titans</span>
+      </a>
+      <div class="auth-links"></div>
+    </div>
+  </nav>
+
+  <section class="stats">
+    <div class="container text-center">
+      <div class="text-mono mb-4" data-testid="competition-subtitle" id="competitionTitle">National Essay Championship
+        2026</div>
+      <h1 data-testid="categories-title">Choose Your Category</h1>
+      <p style="font-size: 1.125rem; color: var(--color-slate-600); max-width: 42rem; margin: 0 auto;"
+        data-testid="categories-description">
+        Select a discipline that resonates with your intellectual curiosity and craft your essay response
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div id="categoriesContainer" style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+        <!-- Categories will be loaded here -->
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      updateNavigation();
+      const user = await getCurrentUser();
+
+      // Load competition
+      const { data: competition } = await supabase
+        .from('competitions')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+
+      if (competition) {
+        document.getElementById('competitionTitle').textContent = competition.title;
+      }
+
+      // Load categories
+      const { data: categories } = await supabase
+        .from('categories')
+        .select('*')
+        .order('title');
+
+      const container = document.getElementById('categoriesContainer');
+
+      if (categories && categories.length > 0) {
+        container.innerHTML = categories.map((cat, index) => `
+        <div class="card" style="padding: 2rem;" data-testid="category-card-${cat.id}">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <div style="font-size: 3rem;">${getIconEmoji(cat.icon)}</div>
+            <div class="text-mono" data-testid="category-wordlimit-${cat.id}">${cat.word_limit} words max</div>
+          </div>
+          <h3 style="font-size: 1.5rem; margin-bottom: 0.75rem;" data-testid="category-title-${cat.id}">${cat.title}</h3>
+          <p style="margin-bottom: 1rem;" data-testid="category-description-${cat.id}">${cat.description}</p>
+          <div class="prompt-box">
+            <div class="prompt-label">Essay Prompt</div>
+            <p class="prompt-text" data-testid="category-prompt-${cat.id}">"${cat.prompt}"</p>
+          </div>
+          ${user ? `
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+              <a href="submit.html?category=${cat.id}" class="btn-primary" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none;" data-testid="category-submit-button-${cat.id}">
+                ✍️ Write Essay
+              </a>
+              <button onclick="openUploadModal('${cat.id}')" class="btn-secondary" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;" data-testid="category-upload-button-${cat.id}">
+                📎 Upload File
+              </button>
+            </div>
+          ` : `
+            <a href="auth.html" class="btn-secondary" style="margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;" data-testid="category-login-button-${cat.id}">
+              Login to Submit
+              <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </a>
+          `}
+        </div>
+      `).join('');
+      } else {
+        container.innerHTML = '<p class="text-center">No categories available</p>';
+      }
+    });
+
+    // Upload Modal Functions
+    let selectedFile = null;
+    let currentCategoryId = null;
+
+    function openUploadModal(categoryId) {
+      currentCategoryId = categoryId;
+      document.getElementById('uploadModal').style.display = 'flex';
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').style.display = 'none';
+      document.getElementById('uploadForm').reset();
+      document.getElementById('fileInfo').style.display = 'none';
+      selectedFile = null;
+    }
+
+    function handleFileSelect(file) {
+      if (!file) return;
+
+      // Check file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        showToast('Please upload a PDF, DOC, or DOCX file', 'error');
+        return;
+      }
+
+      // Check file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('File size must be less than 10MB', 'error');
+        return;
+      }
+
+      selectedFile = file;
+
+      // Show file info
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+      document.getElementById('fileInfo').style.display = 'block';
+    }
+
+    async function submitEssay() {
+      const title = document.getElementById('essayTitle').value.trim();
+      const submitBtn = document.getElementById('submitBtn');
+
+      if (!title) {
+        showToast('Please enter essay title', 'error');
+        return;
+      }
+
+      if (!selectedFile) {
+        showToast('Please select a file to upload', 'error');
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+
+        const user = await getCurrentUser();
+        if (!user) {
+          throw new Error('Please login first');
+        }
+
+        // Generate unique file name
+        const timestamp = Date.now();
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.id}_${timestamp}.${fileExt}`;
+        const filePath = `essays/${fileName}`;
+
+        console.log('📤 Uploading to bucket: essay_uploads');
+        console.log('📄 File path:', filePath);
+
+        // Upload file
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('essay_uploads')
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('❌ Upload error:', uploadError);
+          throw new Error(uploadError.message || 'Failed to upload file');
+        }
+
+        console.log('✅ File uploaded:', uploadData);
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('essay_uploads')
+          .getPublicUrl(filePath);
+
+        const fileUrl = urlData.publicUrl;
+        console.log('🔗 Public URL:', fileUrl);
+
+        // Get category name
+        const { data: category } = await supabase
+          .from('categories')
+          .select('title')
+          .eq('id', currentCategoryId)
+          .single();
+
+        // Save to database with student_name
+        const { data: essayData, error: essayError } = await supabase
+          .from('essays')
+          .insert({
+            student_id: user.id,
+            student_name: user.full_name || user.email || 'Unknown Student',  // ✅ ADDED
+            category_id: currentCategoryId,
+            category_title: category ? category.title : 'Unknown',  // ✅ ADDED
+            title: title,
+            content: `<p>📎 Essay submitted as file: <strong>${selectedFile.name}</strong></p>`,
+            word_count: 0,
+            file_url: fileUrl,
+            file_name: selectedFile.name,
+            file_type: selectedFile.type,
+            status: 'submitted',
+            submitted_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (essayError) {
+          console.error('❌ Database error:', essayError);
+          throw new Error(essayError.message || 'Failed to save essay');
+        }
+
+        console.log('✅ Essay saved:', essayData);
+
+        showToast('✅ Essay uploaded successfully!', 'success');
+        closeUploadModal();
+
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 1500);
+
+      } catch (error) {
+        console.error('❌ Submission error:', error);
+        showToast('Failed: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Essay';
+      }
+    }
+
+    // File input and drag-drop handlers
+    document.addEventListener('DOMContentLoaded', () => {
+      const fileInput = document.getElementById('fileInput');
+      const uploadZone = document.getElementById('uploadZone');
+
+      if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+          handleFileSelect(e.target.files[0]);
+        });
+      }
+
+      if (uploadZone) {
+        uploadZone.addEventListener('click', () => {
+          fileInput.click();
+        });
+
+        uploadZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          uploadZone.style.borderColor = 'var(--color-amber-600)';
+          uploadZone.style.background = 'var(--color-amber-50)';
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+          uploadZone.style.borderColor = 'var(--color-slate-300)';
+          uploadZone.style.background = 'var(--color-slate-50)';
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          uploadZone.style.borderColor = 'var(--color-slate-300)';
+          uploadZone.style.background = 'var(--color-slate-50)';
+          handleFileSelect(e.dataTransfer.files[0]);
+        });
+      }
+
+      // Form submit
+      const uploadForm = document.getElementById('uploadForm');
+      if (uploadForm) {
+        uploadForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          await submitEssay();
+        });
+      }
+    });
+  </script>
+
+  <!-- Upload Modal -->
+  <div id="uploadModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 2rem;">
+    <div
+      style="background: white; padding: 2rem; border-radius: 12px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+      <h2 style="margin-bottom: 1rem;">📎 Upload Essay File</h2>
+      <p style="color: var(--color-slate-600); margin-bottom: 2rem;">Upload your essay as PDF, DOCX, or DOC file</p>
+
+      <form id="uploadForm">
+        <div class="form-group">
+          <label class="form-label">Essay Title *</label>
+          <input type="text" class="form-input" id="essayTitle" required placeholder="Enter your essay title">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Upload File *</label>
+          <div id="uploadZone"
+            style="border: 3px dashed var(--color-slate-300); border-radius: 12px; padding: 3rem; text-align: center; background: var(--color-slate-50); cursor: pointer;">
+            <input type="file" id="fileInput" accept=".pdf,.doc,.docx" style="display: none;">
+            <svg style="width: 64px; height: 64px; stroke: var(--color-slate-400); margin: 0 auto 1rem;" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <h3 style="margin-bottom: 0.5rem;">Click or drag file here</h3>
+            <p style="color: var(--color-slate-600); font-size: 0.875rem;">PDF, DOCX, DOC (max 10MB)</p>
+          </div>
+          <div id="fileInfo"
+            style="background: var(--color-slate-100); padding: 1rem; border-radius: 8px; margin-top: 1rem; display: none;">
+            <strong>Selected File:</strong>
+            <p id="fileName" style="margin: 0.5rem 0 0;">-</p>
+            <p id="fileSize" style="margin: 0.25rem 0 0; color: var(--color-slate-600); font-size: 0.875rem;">-</p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+          <button type="submit" id="submitBtn" class="btn-primary" style="flex: 1;">Submit Essay</button>
+          <button type="button" onclick="closeUploadModal()" class="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+
+</html>

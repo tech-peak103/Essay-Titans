@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard - Essay Titans</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="index.html" class="logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+        </svg>
+        <span>Essay Titans</span>
+      </a>
+      <div class="auth-links"></div>
+    </div>
+  </nav>
+
+  <section class="stats">
+    <div class="container text-center">
+      <svg style="width: 64px; height: 64px; stroke: var(--color-amber-600); margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+      </svg>
+      <h1 data-testid="leaderboard-title">Leaderboard</h1>
+      <p style="font-size: 1.125rem; color: var(--color-slate-600); max-width: 42rem; margin: 0 auto;" data-testid="leaderboard-description">
+        Celebrating excellence in critical thinking and writing
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container" style="max-width: 64rem;">
+      <div class="card" style="overflow: hidden;">
+        <div id="leaderboardContainer"></div>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      updateNavigation();
+
+      // Load leaderboard (essays with scores, sorted by score)
+      const { data: essays } = await supabase
+        .from('essays')
+        .select('id, title, student_name, category_title, score')
+        .not('score', 'is', null)
+        .order('score', { ascending: false })
+        .limit(50);
+
+      const container = document.getElementById('leaderboardContainer');
+
+      if (!essays || essays.length === 0) {
+        container.innerHTML = `
+          <div class="text-center" style="padding: 3rem 0;">
+            <svg style="width: 64px; height: 64px; stroke: var(--color-slate-300); margin: 0 auto 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+            </svg>
+            <p style="color: var(--color-slate-600);" data-testid="no-results-message">No essays have been scored yet</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = essays.map((essay, index) => {
+          let rankClass, rankContent;
+          
+          if (index === 0) {
+            rankClass = 'rank-1';
+            rankContent = '🏆';
+          } else if (index === 1) {
+            rankClass = 'rank-2';
+            rankContent = '🥈';
+          } else if (index === 2) {
+            rankClass = 'rank-3';
+            rankContent = '🥉';
+          } else {
+            rankClass = 'rank-other';
+            rankContent = `#${index + 1}`;
+          }
+
+          return `
+            <div class="leaderboard-entry" data-testid="leaderboard-entry-${index + 1}">
+              <div class="rank-badge ${rankClass}" data-testid="rank-badge-${index + 1}">
+                ${rankContent}
+              </div>
+              <div class="entry-info">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                  <h3 class="entry-title" data-testid="entry-title-${index + 1}">${essay.title}</h3>
+                  <span class="text-mono" style="font-size: 0.75rem;" data-testid="entry-category-${index + 1}">${essay.category_title}</span>
+                </div>
+                <p class="entry-meta" data-testid="entry-author-${index + 1}">by ${essay.student_name}</p>
+              </div>
+              <div class="entry-score">
+                <div class="score-number" data-testid="entry-score-${index + 1}">${essay.score}</div>
+                <div class="score-label">out of 100</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    });
+  </script>
+</body>
+</html>

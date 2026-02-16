@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Essay Titans</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    .admin-table th {
+      background: var(--color-slate-900);
+      color: white;
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.875rem;
+      white-space: nowrap;
+    }
+    .admin-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--color-slate-200);
+      font-size: 0.875rem;
+    }
+    .admin-table tr:hover {
+      background: var(--color-slate-50);
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-submitted {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+    .status-reviewed {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+    .btn-score {
+      padding: 0.5rem 1rem;
+      background: var(--color-amber-600);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .btn-score:hover {
+      background: var(--color-amber-700);
+    }
+    .btn-view {
+      padding: 0.5rem 1rem;
+      background: var(--color-slate-600);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-view:hover {
+      background: var(--color-slate-700);
+    }
+    .btn-download {
+      padding: 0.5rem 1rem;
+      background: var(--color-green-600);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-download:hover {
+      background: var(--color-green-700);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .essay-content {
+      background: var(--color-slate-50);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      max-height: 400px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+    .refresh-btn {
+      padding: 0.5rem 1rem;
+      background: var(--color-green-600);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .refresh-btn:hover {
+      background: var(--color-green-700);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      background: var(--color-slate-50);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .info-label {
+      font-size: 0.75rem;
+      color: var(--color-slate-600);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .info-value {
+      font-size: 1rem;
+      color: var(--color-slate-900);
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+    .tab-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--color-slate-200);
+    }
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--color-slate-600);
+      transition: all 0.2s;
+    }
+    .tab-btn:hover {
+      color: var(--color-slate-900);
+    }
+    .tab-btn.active {
+      color: var(--color-slate-900);
+      border-bottom-color: var(--color-amber-600);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .file-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--color-amber-50);
+      border: 1px solid var(--color-amber-200);
+      padding: 0.5rem;
+      border-radius: 6px;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <div class="container">
+      <a href="index.html" class="logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+          </path>
+        </svg>
+        <span>Essay Titans Admin</span>
+      </a>
+      <div class="auth-links">
+        <button onclick="loadDashboard()" class="refresh-btn">🔄 Refresh</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding: 3rem 1rem;">
+    <div class="dashboard-header">
+      <h1>📊 Admin Dashboard</h1>
+      <p style="color: var(--color-slate-600);">
+        Review students, essays, and manage submissions
+      </p>
+    </div>
+
+    <!-- Stats -->
+    <div class="dashboard-stats">
+      <div class="stat-card">
+        <div id="totalStudents">0</div>
+        <div>Total Students</div>
+      </div>
+      <div class="stat-card">
+        <div id="totalEssays">0</div>
+        <div>Total Essays</div>
+      </div>
+      <div class="stat-card">
+        <div id="pendingReview">0</div>
+        <div>Pending Review</div>
+      </div>
+      <div class="stat-card">
+        <div id="scored">0</div>
+        <div>Reviewed</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card" style="padding: 2rem;">
+      <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab('students')">👥 All Students</button>
+        <button class="tab-btn" onclick="switchTab('essays')">📝 All Essays</button>
+      </div>
+
+      <!-- Students Tab -->
+      <div id="studentsTab" class="tab-content active">
+        <h2 style="margin-bottom: 1rem;">Student Profiles</h2>
+        <div style="overflow-x: auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>School</th>
+                <th>Grade</th>
+                <th>Role</th>
+                <th>Registered Date</th>
+                <th>Total Essays</th>
+                <th>Pending</th>
+                <th>Reviewed</th>
+                <th>Avg Score</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody">
+              <tr>
+                <td colspan="11" style="text-align: center; padding: 3rem;">Loading students...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Essays Tab -->
+      <div id="essaysTab" class="tab-content">
+        <h2 style="margin-bottom: 1rem;">All Essay Submissions</h2>
+        <div style="overflow-x: auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Essay Title</th>
+                <th>Category</th>
+                <th>Words</th>
+                <th>Submitted Date</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="essaysTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 3rem;">Loading essays...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Details Modal -->
+  <div id="studentModal" class="modal">
+    <div class="modal-content">
+      <h2 style="margin-bottom: 1rem;">👤 Student Profile</h2>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Full Name</div>
+          <div class="info-value" id="modalStudentName">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Email</div>
+          <div class="info-value" id="modalStudentEmail">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">School</div>
+          <div class="info-value" id="modalStudentSchool">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Grade</div>
+          <div class="info-value" id="modalStudentGrade">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Role</div>
+          <div class="info-value" id="modalStudentRole">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Registered</div>
+          <div class="info-value" id="modalStudentCreated">-</div>
+        </div>
+      </div>
+
+      <h3 style="margin: 1.5rem 0 1rem;">📝 Student's Essays</h3>
+      <div id="modalStudentEssays" style="max-height: 300px; overflow-y: auto;"></div>
+
+      <button onclick="closeStudentModal()" class="btn-secondary" style="margin-top: 1rem; width: 100%;">Close</button>
+    </div>
+  </div>
+
+  <!-- Essay Scoring Modal -->
+  <div id="scoringModal" class="modal">
+    <div class="modal-content">
+      <h2 style="margin-bottom: 1rem;">📝 Score Essay</h2>
+
+      <div style="background: var(--color-slate-100); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <div class="text-mono" style="font-size: 0.75rem; color: var(--color-slate-600);" id="modalCategoryName"></div>
+        <h3 style="margin: 0.5rem 0;" id="modalEssayTitle"></h3>
+        <p style="margin: 0; color: var(--color-slate-600); font-size: 0.875rem;" id="modalAuthorName"></p>
+      </div>
+
+      <div class="essay-content" id="modalEssayContent"></div>
+
+      <form id="scoringForm" style="margin-top: 1.5rem;">
+        <div class="form-group">
+          <label class="form-label">Score (0–100)</label>
+          <input type="number" class="form-input" id="scoreInput" min="0" max="100" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Feedback (Optional)</label>
+          <textarea class="form-input" id="feedbackInput" rows="4" placeholder="Provide constructive feedback..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn-primary" style="flex: 1;">Submit Score</button>
+          <button type="button" onclick="closeScoringModal()" class="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="main.js"></script>
+
+  <script>
+    let allStudents = [];
+    let allEssays = [];
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      await loadDashboard();
+
+      document.getElementById('scoringForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await submitScore();
+      });
+
+      // Auto-refresh every 30 seconds
+      setInterval(loadDashboard, 30000);
+    });
+
+    async function loadDashboard() {
+      try {
+        console.log('🔄 Loading dashboard...');
+
+        // Load profiles
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        console.log('✅ Profiles loaded:', profiles);
+        console.log('❌ Profiles error:', profilesError);
+
+        if (profilesError) {
+          console.error('Profile error details:', profilesError);
+          throw new Error(`Profiles: ${profilesError.message}`);
+        }
+
+        // Load essays
+        const { data: essays, error: essaysError } = await supabase
+          .from('essays')
+          .select('*')
+          .order('submitted_at', { ascending: false });
+
+        console.log('✅ Essays loaded:', essays);
+        console.log('❌ Essays error:', essaysError);
+
+        if (essaysError) {
+          console.error('Essays error details:', essaysError);
+        }
+
+        // Load categories
+        const { data: categories, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*');
+
+        console.log('✅ Categories loaded:', categories);
+
+        // Manually join the data
+        const essaysWithDetails = (essays || []).map(essay => {
+          const student = (profiles || []).find(p => p.id === essay.student_id);
+          const category = (categories || []).find(c => c.id === essay.category_id);
+          
+          return {
+            ...essay,
+            student: student ? {
+              full_name: student.full_name || 'Unknown',
+              email: student.email || '',
+              school: student.school || '',
+              grade: student.grade || ''
+            } : {
+              full_name: 'Unknown Student',
+              email: '',
+              school: '',
+              grade: ''
+            },
+            category: category ? {
+              title: category.title || 'Unknown'
+            } : {
+              title: 'Unknown Category'
+            }
+          };
+        });
+
+        allStudents = profiles || [];
+        allEssays = essaysWithDetails;
+
+        console.log('📊 Final data:', {
+          students: allStudents.length,
+          essays: allEssays.length
+        });
+
+        // Update stats
+        const studentCount = allStudents.filter(s => s.role !== 'admin').length;
+        document.getElementById('totalStudents').textContent = studentCount;
+        document.getElementById('totalEssays').textContent = allEssays.length;
+        document.getElementById('pendingReview').textContent = 
+          allEssays.filter(e => e.status === 'submitted').length;
+        document.getElementById('scored').textContent = 
+          allEssays.filter(e => e.status === 'reviewed').length;
+
+        renderStudentsTable();
+        renderEssaysTable();
+
+        console.log('✅ Dashboard loaded successfully!');
+
+      } catch (error) {
+        console.error('❌ Error loading dashboard:', error);
+        showToast('Failed to load data: ' + error.message, 'error');
+      }
+    }
+
+    function renderStudentsTable() {
+      const tbody = document.getElementById('studentsTableBody');
+
+      // Filter out admin users
+      const students = allStudents.filter(s => s.role !== 'admin');
+
+      if (students.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="11" style="text-align: center; padding: 3rem; color: var(--color-slate-400);">
+              No students registered yet
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = students.map(student => {
+        const studentEssays = allEssays.filter(e => e.student_id === student.id);
+        const pending = studentEssays.filter(e => e.status === 'submitted').length;
+        const reviewed = studentEssays.filter(e => e.status === 'reviewed').length;
+        const scores = studentEssays.filter(e => e.score).map(e => e.score);
+        const avgScore = scores.length > 0 
+          ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+          : '-';
+
+        return `
+          <tr>
+            <td><strong>${student.full_name || '-'}</strong></td>
+            <td style="font-size: 0.8rem;">${student.email || '-'}</td>
+            <td>${student.school || '-'}</td>
+            <td><strong>${student.grade || '-'}</strong></td>
+            <td><span class="text-mono" style="font-size: 0.75rem;">${student.role || 'student'}</span></td>
+            <td style="font-size: 0.8rem;">${student.created_at ? formatDate(student.created_at) : '-'}</td>
+            <td><strong style="color: var(--color-slate-900);">${studentEssays.length}</strong></td>
+            <td><strong style="color: #F59E0B;">${pending}</strong></td>
+            <td><strong style="color: #10B981;">${reviewed}</strong></td>
+            <td><strong style="color: #10B981; font-size: 1.125rem;">${avgScore}</strong></td>
+            <td>
+              <button class="btn-view" onclick="openStudentModal('${student.id}')">👁️ View</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderEssaysTable() {
+      const tbody = document.getElementById('essaysTableBody');
+
+      if (allEssays.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--color-slate-400);">
+              No essays submitted yet
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = allEssays.map(essay => `
+        <tr>
+          <td>
+            <strong>${essay.student.full_name}</strong><br>
+            <small style="color: var(--color-slate-500);">${essay.student.email}</small>
+          </td>
+          <td style="max-width: 250px;">
+            <strong>${essay.title}</strong>
+            ${essay.file_name ? `
+              <div class="file-badge">
+                <svg style="width: 14px; height: 14px; stroke: var(--color-amber-600);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span>${essay.file_name}</span>
+              </div>
+            ` : ''}
+          </td>
+          <td><span class="text-mono" style="font-size: 0.8rem;">${essay.category.title}</span></td>
+          <td><strong>${essay.word_count || '-'}</strong></td>
+          <td style="font-size: 0.8rem;">${formatDate(essay.submitted_at)}</td>
+          <td>
+            <span class="status-badge status-${essay.status}">
+              ${essay.status === 'submitted' ? 'Pending' : 'Reviewed'}
+            </span>
+          </td>
+          <td>
+            ${essay.score ? `<strong style="color: #10B981; font-size: 1.125rem;">${essay.score}/100</strong>` : '-'}
+          </td>
+          <td>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              ${essay.file_url ? `
+                <a href="${essay.file_url}" download="${essay.file_name}" target="_blank" class="btn-download">
+                  <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                  </svg>
+                  Download
+                </a>
+              ` : ''}
+              <button class="btn-score" onclick="openScoringModal('${essay.id}')">
+                ${essay.score ? '✏️ Edit' : '✅ Score'}
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function switchTab(tabName) {
+      // Update buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // Update content
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.getElementById(tabName + 'Tab').classList.add('active');
+    }
+
+    function openStudentModal(studentId) {
+      const student = allStudents.find(s => s.id === studentId);
+      if (!student) return;
+
+      document.getElementById('modalStudentName').textContent = student.full_name || '-';
+      document.getElementById('modalStudentEmail').textContent = student.email || '-';
+      document.getElementById('modalStudentSchool').textContent = student.school || '-';
+      document.getElementById('modalStudentGrade').textContent = student.grade || '-';
+      document.getElementById('modalStudentRole').textContent = student.role || 'student';
+      document.getElementById('modalStudentCreated').textContent = student.created_at ? formatDate(student.created_at) : '-';
+
+      // Show student's essays
+      const studentEssays = allEssays.filter(e => e.student_id === studentId);
+      const essaysContainer = document.getElementById('modalStudentEssays');
+
+      if (studentEssays.length === 0) {
+        essaysContainer.innerHTML = '<p style="color: var(--color-slate-500); text-align: center; padding: 2rem;">No essays submitted yet</p>';
+      } else {
+        essaysContainer.innerHTML = studentEssays.map(essay => `
+          <div style="background: var(--color-slate-50); padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+              <div style="flex: 1;">
+                <strong>${essay.title}</strong>
+                <div style="font-size: 0.75rem; color: var(--color-slate-600); margin-top: 0.25rem;">
+                  ${essay.category.title} • ${essay.word_count || 0} words • ${formatDate(essay.submitted_at)}
+                </div>
+                ${essay.file_name ? `
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                    <svg style="width: 14px; height: 14px; stroke: var(--color-amber-600);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span style="font-size: 0.75rem; color: var(--color-slate-600);">📎 ${essay.file_name}</span>
+                  </div>
+                ` : ''}
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+                <span class="status-badge status-${essay.status}" style="font-size: 0.7rem;">
+                  ${essay.status === 'submitted' ? 'Pending' : 'Reviewed'}
+                </span>
+                ${essay.score ? `<strong style="color: #10B981;">${essay.score}/100</strong>` : ''}
+              </div>
+            </div>
+            ${essay.file_url ? `
+              <a href="${essay.file_url}" download="${essay.file_name}" target="_blank" class="btn-download" style="font-size: 0.75rem; padding: 0.5rem 1rem; margin-top: 0.5rem; width: 100%; justify-content: center;">
+                <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Download File
+              </a>
+            ` : ''}
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('studentModal').classList.add('active');
+    }
+
+    function closeStudentModal() {
+      document.getElementById('studentModal').classList.remove('active');
+    }
+
+    function openScoringModal(essayId) {
+      const essay = allEssays.find(e => e.id === essayId);
+      if (!essay) return;
+
+      document.getElementById('modalCategoryName').textContent = essay.category.title;
+      document.getElementById('modalEssayTitle').textContent = essay.title;
+      document.getElementById('modalAuthorName').textContent = 
+        `by ${essay.student.full_name} • ${essay.student.school}, Grade ${essay.student.grade} • ${essay.word_count || 0} words`;
+      
+      // Show file download link if essay has a file
+      if (essay.file_url && essay.file_name) {
+        document.getElementById('modalEssayContent').innerHTML = `
+          <div style="background: var(--color-amber-50); border: 2px solid var(--color-amber-200); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+              <svg style="width: 48px; height: 48px; stroke: var(--color-amber-600);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <div style="flex: 1;">
+                <strong style="display: block; margin-bottom: 0.25rem;">📎 Uploaded File</strong>
+                <p style="margin: 0; color: var(--color-slate-600); font-size: 0.875rem;">${essay.file_name}</p>
+              </div>
+            </div>
+            <a href="${essay.file_url}" download="${essay.file_name}" target="_blank" class="btn-download" style="width: 100%; justify-content: center; text-decoration: none;">
+              <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              Download File to Review
+            </a>
+          </div>
+          ${essay.content}
+        `;
+      } else {
+        document.getElementById('modalEssayContent').innerHTML = essay.content;
+      }
+
+      document.getElementById('scoreInput').value = essay.score || '';
+      document.getElementById('feedbackInput').value = essay.feedback || '';
+
+      document.getElementById('scoringForm').dataset.essayId = essayId;
+      document.getElementById('scoringModal').classList.add('active');
+    }
+
+    function closeScoringModal() {
+      document.getElementById('scoringModal').classList.remove('active');
+    }
+
+    async function submitScore() {
+      const essayId = document.getElementById('scoringForm').dataset.essayId;
+      const score = parseInt(document.getElementById('scoreInput').value);
+      const feedback = document.getElementById('feedbackInput').value;
+
+      try {
+        const { error } = await supabase
+          .from('essays')
+          .update({
+            score: score,
+            feedback: feedback,
+            status: 'reviewed'
+          })
+          .eq('id', essayId);
+
+        if (error) throw error;
+
+        showToast('✅ Score submitted successfully!', 'success');
+        closeScoringModal();
+        await loadDashboard();
+      } catch (error) {
+        console.error('Error:', error);
+        showToast('❌ Failed to submit score', 'error');
+      }
+    }
+
+    function formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    function showToast(message, type = 'success') {
+      const existingToasts = document.querySelectorAll('.toast');
+      existingToasts.forEach(t => t.remove());
+
+      const toast = document.createElement('div');
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${type === 'success' ? '#10B981' : '#EF4444'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-weight: 500;
+        opacity: 0;
+        transition: opacity 0.3s;
+      `;
+
+      document.body.appendChild(toast);
+      setTimeout(() => toast.style.opacity = '1', 100);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

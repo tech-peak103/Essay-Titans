@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Essay - Essay Titans</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="index.html" class="logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+        </svg>
+        <span>Essay Titans</span>
+      </a>
+      <div>
+        <a href="categories.html" style="color: var(--color-slate-600); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;" data-testid="back-to-categories">
+          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Back to Categories
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding: 3rem 1rem; max-width: 56rem;">
+    <div class="card card-body">
+      <div style="margin-bottom: 2rem;">
+        <div class="text-mono mb-2" data-testid="submit-category-name" id="categoryName"></div>
+        <h1 data-testid="submit-page-title">Submit Your Essay</h1>
+        <div class="prompt-box" id="promptBox" style="display: none;">
+          <div class="prompt-label">Essay Prompt</div>
+          <p class="prompt-text" data-testid="submit-prompt" id="promptText"></p>
+        </div>
+      </div>
+
+      <form id="essayForm">
+        <div class="form-group">
+          <label class="form-label" data-testid="essay-title-label">Essay Title</label>
+          <input type="text" class="form-input" id="essayTitle" placeholder="Give your essay a compelling title" required data-testid="essay-title-input" style="font-family: var(--font-serif); font-size: 1.125rem;">
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <label class="form-label" data-testid="essay-content-label">Essay Content</label>
+            <div style="font-size: 0.875rem; color: var(--color-slate-600);" data-testid="word-count">
+              <span id="wordCount">0</span> / <span id="wordLimit">2000</span> words
+            </div>
+          </div>
+          <div id="editor" data-testid="essay-content-editor"></div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn-primary" style="flex: 1;" data-testid="submit-essay-button">Submit Essay</button>
+          <a href="categories.html" class="btn-secondary" data-testid="cancel-button">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="main.js"></script>
+  <script>
+    requireAuth();
+
+    let quill;
+    let category;
+    let user;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      user = await getCurrentUser();
+      const urlParams = new URLSearchParams(window.location.search);
+      const categoryId = urlParams.get('category');
+
+      if (!categoryId) {
+        window.location.href = 'categories.html';
+        return;
+      }
+
+      // Load category
+      const { data } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('id', categoryId)
+        .single();
+
+      category = data;
+
+      if (!category) {
+        showToast('Category not found', 'error');
+        window.location.href = 'categories.html';
+        return;
+      }
+
+      document.getElementById('categoryName').textContent = category.title;
+      document.getElementById('promptText').textContent = `"${category.prompt}"`;
+      document.getElementById('promptBox').style.display = 'block';
+      document.getElementById('wordLimit').textContent = category.word_limit;
+
+      // Initialize Quill
+      quill = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: 'Write your essay here...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['blockquote'],
+            ['clean']
+          ]
+        }
+      });
+
+      quill.on('text-change', () => {
+        const wordCount = countWords(quill.root.innerHTML);
+        const wordCountEl = document.getElementById('wordCount');
+        wordCountEl.textContent = wordCount;
+        if (wordCount > category.word_limit) {
+          wordCountEl.style.color = '#DC2626';
+          wordCountEl.style.fontWeight = '600';
+        } else {
+          wordCountEl.style.color = '';
+          wordCountEl.style.fontWeight = '';
+        }
+      });
+    });
+
+    document.getElementById('essayForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById('essayTitle').value;
+      const content = quill.root.innerHTML;
+      const wordCount = countWords(content);
+
+      if (wordCount > category.word_limit) {
+        showToast(`Essay exceeds word limit of ${category.word_limit} words`, 'error');
+        return;
+      }
+
+      if (wordCount < 100) {
+        showToast('Essay must be at least 100 words', 'error');
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('essays')
+          .insert({
+            student_id: user.id,
+            student_name: user.full_name,
+            category_id: category.id,
+            category_title: category.title,
+            title: title,
+            content: content,
+            word_count: wordCount
+          });
+
+        if (error) throw error;
+
+        showToast('Essay submitted successfully!');
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

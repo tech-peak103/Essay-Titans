@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login / Register - Essay Titans</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+    <div class="card" style="max-width: 28rem; width: 100%;">
+      <div class="card-body">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <a href="index.html" class="logo" style="justify-content: center;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 32px; height: 32px;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+            </svg>
+            <span style="font-size: 1.5rem;">Essay Titans</span>
+          </a>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+          <button id="loginTab" class="btn-primary" style="flex: 1;" data-testid="login-tab">Login</button>
+          <button id="registerTab" class="btn-secondary" style="flex: 1;" data-testid="register-tab">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm">
+          <div class="form-group">
+            <label class="form-label" data-testid="email-label">Email</label>
+            <input type="email" class="form-input" id="loginEmail" required data-testid="email-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-testid="password-label">Password</label>
+            <input type="password" class="form-input" id="loginPassword" required data-testid="password-input">
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%;" data-testid="auth-submit-button">Login</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" class="hidden">
+          <div class="form-group">
+            <label class="form-label" data-testid="email-label">Email</label>
+            <input type="email" class="form-input" id="registerEmail" required data-testid="email-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-testid="password-label">Password</label>
+            <input type="password" class="form-input" id="registerPassword" required data-testid="password-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-testid="fullname-label">Full Name</label>
+            <input type="text" class="form-input" id="registerFullName" required data-testid="fullname-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-testid="school-label">School</label>
+            <input type="text" class="form-input" id="registerSchool" required data-testid="school-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-testid="grade-label">Grade</label>
+            <select class="form-select" id="registerGrade" required data-testid="grade-select">
+              <option value="9">9th</option>
+              <option value="10">10th</option>
+              <option value="11">11th</option>
+              <option value="12">12th</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%;" data-testid="auth-submit-button">Register</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="main.js"></script>
+  <script>
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+
+    loginTab.addEventListener('click', () => {
+      loginTab.classList.remove('btn-secondary');
+      loginTab.classList.add('btn-primary');
+      registerTab.classList.remove('btn-primary');
+      registerTab.classList.add('btn-secondary');
+      loginForm.classList.remove('hidden');
+      registerForm.classList.add('hidden');
+    });
+
+    registerTab.addEventListener('click', () => {
+      registerTab.classList.remove('btn-secondary');
+      registerTab.classList.add('btn-primary');
+      loginTab.classList.remove('btn-primary');
+      loginTab.classList.add('btn-secondary');
+      registerForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await signIn(
+          document.getElementById('loginEmail').value,
+          document.getElementById('loginPassword').value
+        );
+        showToast('Logged in successfully!');
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await signUp(
+          document.getElementById('registerEmail').value,
+          document.getElementById('registerPassword').value,
+          document.getElementById('registerFullName').value,
+          document.getElementById('registerSchool').value,
+          document.getElementById('registerGrade').value
+        );
+        showToast('Account created successfully!');
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+
+    // Check if already logged in
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        window.location.href = 'dashboard.html';
+      }
+    });
+  </script>
+</body>
+</html>
