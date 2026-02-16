@@ -339,6 +339,9 @@ nav .container {
   grid-template-columns: 1fr;
   gap: 1.5rem;
 }
+.categories-grid a{
+  text-decoration: none;
+}
 
 @media (min-width: 768px) {
   .categories-grid {
